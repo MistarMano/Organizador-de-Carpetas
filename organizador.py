@@ -1,3 +1,13 @@
+
+"""
+Organizador recursivo de archivos por extensión.
+
+Solicita una carpeta de origen y otra de destino, recorre todos los
+niveles de subcarpetas y mueve los archivos a subcarpetas clasificadas
+por extensión. Evita sobrescribir archivos, calcula estadísticas y
+muestra un informe mediante la biblioteca Rich.
+"""
+
 import os
 import shutil
 
@@ -6,43 +16,59 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.table import Table
 
+
 def mostrar_cabecera(consola):
+    
+   #Muestra el título del programa en un panel de Rich.
+    
     panel = Panel(
         "[bold cyan]ORGANIZADOR DE ARCHIVOS[/bold cyan]\n"
         "[white]Clasificación automática por extensión[/white]",
         title="[bold yellow]Python[/bold yellow]",
-        border_style="cyan"
-        )
+        border_style="cyan",
+        padding=(1, 3)
+    )
     consola.print(panel)
- 
-    
+
+
 def obtener_extension(nombre_archivo):
+
+   # Obtiene la extensión de un archivo en minúsculas y sin el punto.
+
     nombre, extension = os.path.splitext(nombre_archivo)
+
     if extension:
         return extension[1:].lower()
-    
+
     return "sin_extension"
 
 
 def tamano_legible(tamano_bytes):
+   # Convierte bytes a una unidad legible mediante divisiones sucesivas.
+
+
     unidades = ["bytes", "KB", "MB", "GB"]
     tamano = float(tamano_bytes)
     indice = 0
-    
+
     while tamano >= 1024 and indice < len(unidades) - 1:
         tamano /= 1024
         indice += 1
-        
+
     if indice == 0:
         return f"{int(tamano)} {unidades[indice]}"
-    
+
     return f"{tamano:.2f} {unidades[indice]}"
 
 
 def una_dentro_de_otra(ruta_a, ruta_b):
+    
+    #Comprueba si dos rutas representan la misma carpeta o si una está contenida dentro de la otra.
+
     ruta_a = os.path.abspath(ruta_a)
     ruta_b = os.path.abspath(ruta_b)
 
+    # Añadir el separador evita confundir carpetas con nombres similares.
     if not ruta_a.endswith(os.sep):
         ruta_a += os.sep
 
@@ -53,6 +79,8 @@ def una_dentro_de_otra(ruta_a, ruta_b):
 
 
 def nombre_disponible(ruta_destino, nombre_archivo):
+   # Busca un nombre que no exista en la carpeta de destino.
+
     nombre, extension = os.path.splitext(nombre_archivo)
     nombre_candidato = nombre_archivo
     contador = 1
@@ -64,28 +92,31 @@ def nombre_disponible(ruta_destino, nombre_archivo):
     return nombre_candidato
 
 
-def clasificar_archivo(ruta_origen, nombre_archivo, ruta_destino, historial):
+def clasificar_archivo(ruta_origen, nombre_archivo,ruta_destino, historial):
+  #  Mueve un archivo a la subcarpeta correspondiente a su extensión.
+
     ruta_archivo = os.path.join(ruta_origen, nombre_archivo)
 
+    # Obtener el tamaño antes de mover el archivo.
     tamano = os.path.getsize(ruta_archivo)
 
     extension = obtener_extension(nombre_archivo)
     carpeta_clasificada = os.path.join(ruta_destino, extension)
 
+    # Crear la carpeta de la extensión si todavía no existe.
     os.makedirs(carpeta_clasificada, exist_ok=True)
 
-    nombre_final = nombre_disponible(
-        carpeta_clasificada,
-        nombre_archivo
-    )
+    # Evitar sobrescribir archivos con el mismo nombre.
+    nombre_final = nombre_disponible(carpeta_clasificada, nombre_archivo )
 
     ruta_final = os.path.join(carpeta_clasificada, nombre_final)
 
+    # Mover el archivo y registrar el movimiento.
     shutil.move(ruta_archivo, ruta_final)
 
     movimiento = (
         f"{os.path.relpath(ruta_archivo, start=ruta_origen)} "
-        f"{extension}/{nombre_final}"
+        f"→ {extension}/{nombre_final}"
     )
     historial.append(movimiento)
 
@@ -93,18 +124,21 @@ def clasificar_archivo(ruta_origen, nombre_archivo, ruta_destino, historial):
 
 
 def clasificar_carpeta_recursivo(ruta_origen, ruta_destino, historial):
+    
+   # Clasifica todos los archivos de una carpeta y sus subcarpetas.
+
     tamano_total = 0
 
     for elemento in os.listdir(ruta_origen):
         ruta_elemento = os.path.join(ruta_origen, elemento)
-        
+
         if os.path.isdir(ruta_elemento):
             tamano_total += clasificar_carpeta_recursivo(
                 ruta_elemento,
                 ruta_destino,
                 historial
             )
-
+            
         elif os.path.isfile(ruta_elemento):
             tamano_total += clasificar_archivo(
                 ruta_origen,
@@ -117,6 +151,8 @@ def clasificar_carpeta_recursivo(ruta_origen, ruta_destino, historial):
 
 
 def contar_archivos_recursivo(ruta):
+    
+   # Cuenta los archivos de una carpeta y todos sus subdirectorios.
     total = 0
 
     for elemento in os.listdir(ruta):
@@ -132,6 +168,9 @@ def contar_archivos_recursivo(ruta):
 
 
 def mostrar_informe(consola, movidos, tamano_total, en_origen, en_destino, historial):
+    
+    # Muestra las estadísticas y el historial mediante tablas de Rich.
+
     consola.print()
 
     tabla = Table(
@@ -155,6 +194,7 @@ def mostrar_informe(consola, movidos, tamano_total, en_origen, en_destino, histo
 
     consola.print(tabla)
 
+    # Tabla con todos los movimientos realizados.
     tabla_historial = Table(
         title="HISTORIAL DE MOVIMIENTOS",
         header_style="bold magenta",
@@ -169,9 +209,10 @@ def mostrar_informe(consola, movidos, tamano_total, en_origen, en_destino, histo
 
     consola.print()
     consola.print(tabla_historial)
-    
-    
+
+
 def main():
+    
     consola = Console()
 
     mostrar_cabecera(consola)
@@ -244,7 +285,7 @@ def main():
     except OSError as error:
         consola.print(
             Panel(
-                f"[bold red]Error al acceder o mover archivos:[/bold red]\n"
+                "[bold red]Error al acceder o mover archivos:[/bold red]\n"
                 f"{error}",
                 border_style="red"
             )
