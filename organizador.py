@@ -116,7 +116,7 @@ def clasificar_archivo(ruta_origen, nombre_archivo,ruta_destino, historial):
 
     movimiento = (
         f"{os.path.relpath(ruta_archivo, start=ruta_origen)} "
-        f"→ {extension}/{nombre_final}"
+        f"{extension}/{nombre_final}"
     )
     historial.append(movimiento)
 
